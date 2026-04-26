@@ -50,7 +50,7 @@ function readConfig(): Config {
   } catch { }
   return {
     workSecs: DEFAULT_WORK_SECS, breakSecs: DEFAULT_BREAK_SECS,
-    workColor: "#121212", breakColor: "#121212",
+    workColor: "#f05365", breakColor: "#7d83ff",
   };
 }
 
