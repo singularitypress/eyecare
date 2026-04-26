@@ -1,0 +1,344 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize, LogicalPosition, PhysicalPosition } from "@tauri-apps/api/dpi";
+import "./App.css";
+
+const DEFAULT_WORK_SECS = 12 * 60 + 30;
+const DEFAULT_BREAK_SECS = 60;
+const BREAK_EXIT_MS = 350;
+
+const WIDGET = { w: 240, h: 80 } as const;
+const SETTINGS_WIN = { w: 340, h: 185 } as const;
+
+type Phase = "work" | "break" | "settings";
+
+interface Config {
+  workSecs: number;
+  breakSecs: number;
+  workColor: string;
+  breakColor: string;
+}
+
+function fmt(secs: number): string {
+  return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, "0")}`;
+}
+
+function hexToRgba(hex: string, a: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+const isValidHex = (s: string) => /^#[0-9a-fA-F]{6}$/.test(s);
+
+function readConfig(): Config {
+  try {
+    const raw = localStorage.getItem("eyecare-config");
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (typeof p.workSecs === "number" && typeof p.breakSecs === "number") {
+        return {
+          workSecs: p.workSecs,
+          breakSecs: p.breakSecs,
+          workColor: isValidHex(p.workColor) ? p.workColor : "#f05365",
+          breakColor: isValidHex(p.breakColor) ? p.breakColor : "#7d83ff",
+        };
+      }
+    }
+  } catch { }
+  return {
+    workSecs: DEFAULT_WORK_SECS, breakSecs: DEFAULT_BREAK_SECS,
+    workColor: "#121212", breakColor: "#121212",
+  };
+}
+
+export default function App() {
+  const appWindow = useMemo(() => getCurrentWindow(), []);
+
+  const [config, setConfig] = useState<Config>(readConfig);
+  const [phase, setPhase] = useState<Phase>("work");
+  const [remaining, setRemaining] = useState<number>(config.workSecs);
+  const [breakExiting, setBreakExiting] = useState(false);
+
+  const [inputWorkMin, setInputWorkMin] = useState("12");
+  const [inputWorkSec, setInputWorkSec] = useState("30");
+  const [inputBreakMin, setInputBreakMin] = useState("1");
+  const [inputBreakSec, setInputBreakSec] = useState("0");
+  const [inputWorkColor, setInputWorkColor] = useState("#f05365");
+  const [inputBreakColor, setInputBreakColor] = useState("#7d83ff");
+
+  const phaseRef = useRef<Phase>("work");
+  const configRef = useRef<Config>(config);
+  const remainingRef = useRef<number>(config.workSecs);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedPosRef = useRef<{ x: number; y: number } | null>(null);
+  phaseRef.current = phase;
+  configRef.current = config;
+
+  /* ── Window positioning ── */
+
+  const toWorkMode = useCallback(async () => {
+    await appWindow.setDecorations(true);
+    await appWindow.setSize(new LogicalSize(WIDGET.w, WIDGET.h));
+    if (savedPosRef.current) {
+      await appWindow.setPosition(new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y));
+      savedPosRef.current = null;
+    }
+    await appWindow.show();
+  }, [appWindow]);
+
+  const toBreakMode = useCallback(async () => {
+    const pos = await appWindow.outerPosition();
+    savedPosRef.current = { x: pos.x, y: pos.y };
+    await appWindow.setDecorations(false);
+    await appWindow.setSize(new LogicalSize(screen.width, screen.height));
+    await appWindow.setPosition(new LogicalPosition(0, 0));
+    await appWindow.show();
+  }, [appWindow]);
+
+  const toSettingsMode = useCallback(async () => {
+    await appWindow.setDecorations(true);
+    await appWindow.setSize(new LogicalSize(SETTINGS_WIN.w, SETTINGS_WIN.h));
+    await appWindow.setPosition(new LogicalPosition(
+      Math.round((screen.width - SETTINGS_WIN.w) / 2),
+      Math.round((screen.height - SETTINGS_WIN.h) / 2),
+    ));
+    await appWindow.show();
+  }, [appWindow]);
+
+  /* ── Animated break exit ── */
+
+  const startBreakExit = useCallback((onDone: () => void) => {
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+    if (exitTimerRef.current) { clearTimeout(exitTimerRef.current); }
+    setBreakExiting(true);
+    exitTimerRef.current = setTimeout(() => {
+      setBreakExiting(false);
+      onDone();
+    }, BREAK_EXIT_MS);
+  }, []);
+
+  /* ── Timer ── */
+
+  const startTick = useCallback(() => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(() => {
+      const next = remainingRef.current - 1;
+      if (next <= 0) {
+        if (phaseRef.current === "work") {
+          const dur = configRef.current.breakSecs;
+          phaseRef.current = "break";
+          remainingRef.current = dur;
+          setRemaining(dur);
+          // Render break UI only after window is fullscreen — eliminates the
+          // brief flash of break content on a still-small window.
+          toBreakMode().then(() => setPhase("break"));
+        } else if (phaseRef.current === "break") {
+          clearInterval(tickRef.current!);
+          tickRef.current = null;
+          const dur = configRef.current.workSecs;
+          startBreakExit(() => {
+            phaseRef.current = "work";
+            remainingRef.current = dur;
+            setRemaining(dur);
+            // Render widget only after window has shrunk back — eliminates
+            // the flash of widget content stretched across a fullscreen window.
+            toWorkMode().then(() => {
+              setPhase("work");
+              startTick(); // eslint-disable-line @typescript-eslint/no-use-before-define
+            });
+          });
+        }
+      } else {
+        remainingRef.current = next;
+        setRemaining(next);
+      }
+    }, 1000);
+  }, [toBreakMode, toWorkMode, startBreakExit]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Init ── */
+
+  useEffect(() => {
+    toWorkMode().then(startTick);
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Keyboard shortcuts ── */
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (phaseRef.current === "break") {
+        const dur = configRef.current.workSecs;
+        startBreakExit(() => {
+          phaseRef.current = "work";
+          remainingRef.current = dur;
+          setRemaining(dur);
+          toWorkMode().then(() => {
+            setPhase("work");
+            startTick();
+          });
+        });
+      } else if (phaseRef.current === "settings") {
+        if (tickRef.current) clearInterval(tickRef.current);
+        phaseRef.current = "work";
+        toWorkMode().then(() => {
+          setPhase("work");
+          startTick();
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toWorkMode, startTick, startBreakExit]);
+
+  /* ── Settings ── */
+
+  const openSettings = async () => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    const pos = await appWindow.outerPosition();
+    savedPosRef.current = { x: pos.x, y: pos.y };
+    const { workSecs, breakSecs, workColor, breakColor } = config;
+    setInputWorkMin(String(Math.floor(workSecs / 60)));
+    setInputWorkSec(String(workSecs % 60));
+    setInputBreakMin(String(Math.floor(breakSecs / 60)));
+    setInputBreakSec(String(breakSecs % 60));
+    setInputWorkColor(workColor);
+    setInputBreakColor(breakColor);
+    setPhase("settings");
+    phaseRef.current = "settings";
+    await toSettingsMode();
+  };
+
+  const cancelSettings = async () => {
+    phaseRef.current = "work";
+    await toWorkMode();
+    setPhase("work");
+    startTick();
+  };
+
+  const applySettings = async () => {
+    const wm = parseInt(inputWorkMin, 10);
+    const ws = parseInt(inputWorkSec, 10);
+    const bm = parseInt(inputBreakMin, 10);
+    const bs = parseInt(inputBreakSec, 10);
+    if ([wm, ws, bm, bs].some(isNaN)) return;
+    if (ws < 0 || ws > 59 || bs < 0 || bs > 59) return;
+    if (wm < 0 || bm < 0) return;
+    const totalWork = wm * 60 + ws;
+    const totalBreak = bm * 60 + bs;
+    if (totalWork <= 0 || totalBreak <= 0) return;
+    if (!isValidHex(inputWorkColor) || !isValidHex(inputBreakColor)) return;
+    const next: Config = {
+      workSecs: totalWork, breakSecs: totalBreak,
+      workColor: inputWorkColor, breakColor: inputBreakColor,
+    };
+    setConfig(next);
+    configRef.current = next;
+    localStorage.setItem("eyecare-config", JSON.stringify(next));
+    phaseRef.current = "work";
+    remainingRef.current = totalWork;
+    setRemaining(totalWork);
+    await toWorkMode();
+    setPhase("work");
+    startTick();
+  };
+
+  /* ── Hex input handler ── */
+
+  const onHexChange = (raw: string, set: (v: string) => void) => {
+    const v = raw.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+    set("#" + v);
+  };
+
+  /* ── Render ── */
+
+  if (phase === "break") {
+    return (
+      <main
+        className={`break-overlay${breakExiting ? " exiting" : ""}`}
+        style={{ background: hexToRgba(config.breakColor, 0.65) }}
+      >
+        <div className="break-card">
+          <h1>Look away</h1>
+          <p className="break-sub">Focus on something distant</p>
+          <div className="break-timer">{fmt(remaining)}</div>
+          <p className="hint">Press <kbd>Esc</kbd> to skip</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "settings") {
+    return (
+      <main className="settings-overlay">
+        <div className="settings-card">
+          <h2>Intervals</h2>
+          <div className="settings-field">
+            <label>Work</label>
+            <div className="duration-inputs">
+              <input type="number" min="0" value={inputWorkMin}
+                onChange={e => setInputWorkMin(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <span className="duration-sep">m</span>
+              <input type="number" min="0" max="59" value={inputWorkSec}
+                onChange={e => setInputWorkSec(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <span className="duration-sep">s</span>
+              <input type="color" className="color-swatch" value={inputWorkColor}
+                onChange={e => setInputWorkColor(e.target.value)} />
+              <span className="hex-prefix">#</span>
+              <input type="text" className="hex-input"
+                value={inputWorkColor.replace(/^#/, "")}
+                maxLength={6} spellCheck={false} placeholder="f05365"
+                onChange={e => onHexChange(e.target.value, setInputWorkColor)} />
+            </div>
+          </div>
+          <div className="settings-field">
+            <label>Break</label>
+            <div className="duration-inputs">
+              <input type="number" min="0" value={inputBreakMin}
+                onChange={e => setInputBreakMin(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <span className="duration-sep">m</span>
+              <input type="number" min="0" max="59" value={inputBreakSec}
+                onChange={e => setInputBreakSec(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <span className="duration-sep">s</span>
+              <input type="color" className="color-swatch" value={inputBreakColor}
+                onChange={e => setInputBreakColor(e.target.value)} />
+              <span className="hex-prefix">#</span>
+              <input type="text" className="hex-input"
+                value={inputBreakColor.replace(/^#/, "")}
+                maxLength={6} spellCheck={false} placeholder="7d83ff"
+                onChange={e => onHexChange(e.target.value, setInputBreakColor)} />
+            </div>
+          </div>
+          <div className="settings-actions">
+            <button className="btn-cancel" onClick={cancelSettings}>Cancel</button>
+            <button className="btn-apply" onClick={applySettings}>Apply</button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main
+      className="widget"
+      style={{ background: hexToRgba(config.workColor, 0.82) }}
+    >
+      <div className="widget-top">
+        <span className="widget-label">Next break</span>
+        <button className="widget-gear" onClick={openSettings} title="Settings">⚙</button>
+      </div>
+      <div className="widget-timer">{fmt(remaining)}</div>
+    </main>
+  );
+}
