@@ -266,8 +266,8 @@ export default function App() {
         style={{ background: hexToRgba(config.breakColor, 0.65) }}
       >
         <div className="break-card">
-          <h1>Look away</h1>
-          <p className="break-sub">Focus on something distant</p>
+          <h1>Relax</h1>
+          <p className="break-sub">Remember to hydrate! Drink water.</p>
           <div className="break-timer">{fmt(remaining)}</div>
           <p className="hint">Press <kbd>Esc</kbd> to skip</p>
         </div>

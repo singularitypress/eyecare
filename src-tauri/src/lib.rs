@@ -1,4 +1,3 @@
-use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 use window_vibrancy::apply_acrylic;
@@ -7,7 +6,7 @@ use window_vibrancy::apply_acrylic;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(|_app| {
             
             // By wrapping this in a block, the window variable is 
             // only instantiated when building for Windows.
