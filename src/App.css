@@ -1,269 +1,321 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-html, body, #root {
-  width: 100%;
-  height: 100%;
-  background: transparent;
+html,
+body,
+#root {
+    min-width: 100%;
+    min-height: 100%;
+    background: transparent;
 }
 
 :root {
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  color: #111;
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #111;
 }
 
 /* ─── Break phase ─────────────────────────────────── */
 
 .break-overlay {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: breakIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: breakIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .break-overlay.exiting {
-  animation: breakOut 0.28s ease-in forwards;
-  pointer-events: none;
+    animation: breakOut 0.28s ease-in forwards;
+    pointer-events: none;
 }
 
 @keyframes breakIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes breakOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
 }
 
 .break-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 56px 88px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 56px 88px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(12px);
 }
 
 .break-card h1 {
-  font-size: 3rem;
-  font-weight: 600;
-  letter-spacing: -0.5px;
+    font-size: 3rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
 }
 
 .break-sub {
-  font-size: 0.95rem;
-  opacity: 0.6;
+    font-size: 0.95rem;
+    opacity: 0.6;
 }
 
 .break-timer {
-  font-size: 4.5rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -2px;
-  margin: 4px 0;
+    font-size: 4.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+    margin: 4px 0;
 }
 
 .hint {
-  font-size: 0.8rem;
-  opacity: 0.4;
+    font-size: 0.8rem;
+    opacity: 0.4;
 }
 
 kbd {
-  font-family: inherit;
-  font-size: 0.75rem;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.18);
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 /* ─── Settings panel ──────────────────────────────── */
 
 .settings-overlay {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
+    min-width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
 }
 
 .settings-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 20px;
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  background: rgba(245, 245, 245, 0.95);
-  border: none;
-  backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 20px;
+    min-width: 100%;
+    min-height: 100%;
+    border-radius: 0;
+    color: #fff;
+    /*background: rgba(245, 245, 245, 0.95);*/
+    border: none;
+    backdrop-filter: blur(12px);
 }
 
 .settings-card h2 {
-  font-size: 0.88rem;
-  font-weight: 600;
-  opacity: 0.75;
+    font-size: 0.88rem;
+    font-weight: 600;
+    opacity: 0.75;
 }
 
 .settings-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .settings-field label {
-  font-size: 0.8rem;
-  opacity: 0.55;
-  flex-shrink: 0;
-  min-width: 36px;
+    font-size: 0.8rem;
+    opacity: 0.55;
+    flex-shrink: 0;
+    min-width: 36px;
 }
 
 .duration-inputs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .duration-inputs input[type="number"] {
-  width: 44px;
-  padding: 5px 6px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  color: #111;
-  font-size: 0.85rem;
-  font-family: inherit;
-  text-align: center;
-  outline: none;
-  -moz-appearance: textfield;
+    color: #fff;
+    width: 44px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.85rem;
+    font-family: inherit;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
 }
 
 .duration-inputs input[type="number"]::-webkit-outer-spin-button,
 .duration-inputs input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+    -webkit-appearance: none;
 }
 
 .duration-inputs input[type="number"]:focus {
-  border-color: rgba(0, 0, 0, 0.4);
-  background: rgba(0, 0, 0, 0.09);
+    border-color: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.09);
 }
 
 .duration-sep {
-  font-size: 0.78rem;
-  opacity: 0.35;
-  margin-right: 2px;
+    font-size: 0.78rem;
+    opacity: 0.35;
+    margin-right: 2px;
 }
 
 /* Colour picker swatch */
-.color-input {
-  width: 28px;
-  height: 24px;
-  padding: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 5px;
-  background: none;
-  cursor: pointer;
-  margin-left: 4px;
-  flex-shrink: 0;
+.color-swatch {
+    width: 28px;
+    height: 24px;
+    padding: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    background: none;
+    cursor: pointer;
+    margin-left: 4px;
+    flex-shrink: 0;
 }
 
-.color-input::-webkit-color-swatch-wrapper { padding: 0; }
-.color-input::-webkit-color-swatch { border: none; border-radius: 3px; }
+.color-swatch::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.color-swatch::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
+.hex-prefix {
+    font-size: 0.78rem;
+    opacity: 0.35;
+    flex-shrink: 0;
+}
+
+.hex-input {
+    width: 128px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.hex-input:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.09);
+}
 
 .settings-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: auto;
 }
 
 .btn-cancel,
 .btn-apply {
-  padding: 5px 14px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid transparent;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
 }
 
 .btn-cancel {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.6);
 }
 
-.btn-cancel:hover { background: rgba(0, 0, 0, 0.1); }
+.btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
 
 .btn-apply {
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
-  font-weight: 500;
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    font-weight: 500;
 }
 
-.btn-apply:hover { background: #000; }
+.btn-apply:hover {
+    background: #000;
+}
 
 /* ─── Work widget ─────────────────────────────────── */
 
 .widget {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: 0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(12px);
-  animation: widgetIn 0.2s ease;
+    min-width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(12px);
+    animation: widgetIn 0.2s ease;
 }
 
 @keyframes widgetIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .widget-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .widget-label {
-  font-size: 0.68rem;
-  opacity: 0.45;
-  letter-spacing: 0.3px;
+    font-size: 0.68rem;
+    opacity: 0.45;
+    letter-spacing: 0.3px;
 }
 
 .widget-gear {
-  background: none;
-  border: none;
-  color: rgba(0, 0, 0, 0.3);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 3px;
-  line-height: 1;
+    background: none;
+    border: none;
+    color: rgba(0, 0, 0, 0.3);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+    line-height: 1;
 }
 
 .widget-gear:hover {
-  color: rgba(0, 0, 0, 0.75);
-  background: rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.08);
 }
 
 .widget-timer {
-  font-size: 2rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -1px;
-  margin-top: 2px;
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    margin-top: 2px;
 }

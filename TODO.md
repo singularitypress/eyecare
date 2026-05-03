@@ -1,5 +1,1 @@
-1. Persist window size across updates/ re-open
-2. Update header bar to match colour of mode
-3. Update settings icon to be bigger
-4. Make div a scrollview
-5. Settings shouldn't be a separate window?
+The applySettings function has multiple silent return guards — if any input is mid-edit (e.g. an empty number field, or a hex code shorter than 6 chars), it bails without feedback and users assume the button is broken. The fix: compute validity in render and disable Apply when the inputs aren't valid yet.

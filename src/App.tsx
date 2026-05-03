@@ -116,11 +116,13 @@ export default function App() {
 
   const toSettingsMode = useCallback(async () => {
     await appWindow.setDecorations(true);
-    await appWindow.setSize(new LogicalSize(SETTINGS_WIN.w, SETTINGS_WIN.h));
-    await appWindow.setPosition(new LogicalPosition(
-      Math.round((screen.width - SETTINGS_WIN.w) / 2),
-      Math.round((screen.height - SETTINGS_WIN.h) / 2),
-    ));
+    const saved = localStorage.getItem("eyecare-settings-size");
+    const size = saved ? JSON.parse(saved) as { w: number; h: number } : null;
+    if (size) {
+      await appWindow.setSize(new PhysicalSize(size.w, size.h));
+    } else {
+      await appWindow.setSize(new LogicalSize(SETTINGS_WIN.w, SETTINGS_WIN.h));
+    }
     await appWindow.show();
   }, [appWindow]);
 
@@ -179,9 +181,12 @@ export default function App() {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     appWindow.onResized(async () => {
-      if (phaseRef.current !== "work") return;
       const size = await appWindow.outerSize();
-      localStorage.setItem("eyecare-window-size", JSON.stringify({ w: size.width, h: size.height }));
+      if (phaseRef.current === "work") {
+        localStorage.setItem("eyecare-window-size", JSON.stringify({ w: size.width, h: size.height }));
+      } else if (phaseRef.current === "settings") {
+        localStorage.setItem("eyecare-settings-size", JSON.stringify({ w: size.width, h: size.height }));
+      }
     }).then(fn => { unlisten = fn; });
     return () => unlisten?.();
   }, [appWindow]);
