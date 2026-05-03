@@ -9,7 +9,7 @@ html, body, #root {
 :root {
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  color: #fff;
+  color: #111;
 }
 
 /* ─── Break phase ─────────────────────────────────── */
@@ -45,10 +45,9 @@ html, body, #root {
   gap: 14px;
   padding: 56px 88px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(12px);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
 }
 
 .break-card h1 {
@@ -80,8 +79,8 @@ kbd {
   font-size: 0.75rem;
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 /* ─── Settings panel ──────────────────────────────── */
@@ -103,7 +102,7 @@ kbd {
   width: 100%;
   height: 100%;
   border-radius: 0;
-  background: rgba(20, 20, 20, 0.9);
+  background: rgba(245, 245, 245, 0.95);
   border: none;
   backdrop-filter: blur(12px);
 }
@@ -138,9 +137,9 @@ kbd {
   width: 44px;
   padding: 5px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: #111;
   font-size: 0.85rem;
   font-family: inherit;
   text-align: center;
@@ -154,8 +153,8 @@ kbd {
 }
 
 .duration-inputs input[type="number"]:focus {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.09);
 }
 
 .duration-sep {
@@ -169,7 +168,7 @@ kbd {
   width: 28px;
   height: 24px;
   padding: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 5px;
   background: none;
   cursor: pointer;
@@ -198,20 +197,20 @@ kbd {
 }
 
 .btn-cancel {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.6);
 }
 
-.btn-cancel:hover { background: rgba(255, 255, 255, 0.13); }
+.btn-cancel:hover { background: rgba(0, 0, 0, 0.1); }
 
 .btn-apply {
-  background: rgba(255, 255, 255, 0.88);
-  color: #111;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
   font-weight: 500;
 }
 
-.btn-apply:hover { background: #fff; }
+.btn-apply:hover { background: #000; }
 
 /* ─── Work widget ─────────────────────────────────── */
 
@@ -223,7 +222,7 @@ kbd {
   justify-content: center;
   padding: 8px 12px;
   border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(12px);
   animation: widgetIn 0.2s ease;
 }
@@ -248,7 +247,7 @@ kbd {
 .widget-gear {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(0, 0, 0, 0.3);
   font-size: 0.8rem;
   cursor: pointer;
   padding: 2px 5px;
@@ -257,8 +256,8 @@ kbd {
 }
 
 .widget-gear:hover {
-  color: rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .widget-timer {

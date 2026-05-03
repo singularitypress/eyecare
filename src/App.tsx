@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalSize, LogicalPosition, PhysicalPosition } from "@tauri-apps/api/dpi";
+import { LogicalSize, LogicalPosition, PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import "./App.css";
 
 const DEFAULT_WORK_SECS = 12 * 60 + 30;
@@ -61,6 +61,10 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>("work");
   const [remaining, setRemaining] = useState<number>(config.workSecs);
   const [breakExiting, setBreakExiting] = useState(false);
+  const [fontScale, setFontScale] = useState(() => {
+    const saved = localStorage.getItem("eyecare-font-scale");
+    return saved ? parseFloat(saved) : 1;
+  });
 
   const [inputWorkMin, setInputWorkMin] = useState("12");
   const [inputWorkSec, setInputWorkSec] = useState("30");
@@ -75,6 +79,7 @@ export default function App() {
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedPosRef = useRef<{ x: number; y: number } | null>(null);
+  const savedSizeRef = useRef<{ w: number; h: number } | null>(null);
   phaseRef.current = phase;
   configRef.current = config;
 
@@ -82,7 +87,16 @@ export default function App() {
 
   const toWorkMode = useCallback(async () => {
     await appWindow.setDecorations(true);
-    await appWindow.setSize(new LogicalSize(WIDGET.w, WIDGET.h));
+    const restoreSize = savedSizeRef.current ?? (() => {
+      const s = localStorage.getItem("eyecare-window-size");
+      return s ? JSON.parse(s) as { w: number; h: number } : null;
+    })();
+    if (restoreSize) {
+      await appWindow.setSize(new PhysicalSize(restoreSize.w, restoreSize.h));
+    } else {
+      await appWindow.setSize(new LogicalSize(WIDGET.w, WIDGET.h));
+    }
+    savedSizeRef.current = null;
     if (savedPosRef.current) {
       await appWindow.setPosition(new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y));
       savedPosRef.current = null;
@@ -91,8 +105,9 @@ export default function App() {
   }, [appWindow]);
 
   const toBreakMode = useCallback(async () => {
-    const pos = await appWindow.outerPosition();
+    const [pos, size] = await Promise.all([appWindow.outerPosition(), appWindow.outerSize()]);
     savedPosRef.current = { x: pos.x, y: pos.y };
+    savedSizeRef.current = { w: size.width, h: size.height };
     await appWindow.setDecorations(false);
     await appWindow.setSize(new LogicalSize(screen.width, screen.height));
     await appWindow.setPosition(new LogicalPosition(0, 0));
@@ -159,6 +174,18 @@ export default function App() {
     }, 1000);
   }, [toBreakMode, toWorkMode, startBreakExit]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── Persist work window size on resize ── */
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    appWindow.onResized(async () => {
+      if (phaseRef.current !== "work") return;
+      const size = await appWindow.outerSize();
+      localStorage.setItem("eyecare-window-size", JSON.stringify({ w: size.width, h: size.height }));
+    }).then(fn => { unlisten = fn; });
+    return () => unlisten?.();
+  }, [appWindow]);
+
   /* ── Init ── */
 
   useEffect(() => {
@@ -197,6 +224,35 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [toWorkMode, startTick, startBreakExit]);
+
+  /* ── Font scale ── */
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontScale * 16}px`;
+  }, [fontScale]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) return;
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        setFontScale(s => {
+          const next = Math.min(2, Math.round((s + 0.1) * 10) / 10);
+          localStorage.setItem("eyecare-font-scale", String(next));
+          return next;
+        });
+      } else if (e.key === "-") {
+        e.preventDefault();
+        setFontScale(s => {
+          const next = Math.max(0.5, Math.round((s - 0.1) * 10) / 10);
+          localStorage.setItem("eyecare-font-scale", String(next));
+          return next;
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   /* ── Settings ── */
 
