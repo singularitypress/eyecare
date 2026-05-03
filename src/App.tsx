@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   LogicalSize,
@@ -13,7 +13,7 @@ const DEFAULT_BREAK_SECS = 30;
 const BREAK_EXIT_MS = 350;
 
 const WIDGET = { w: 240, h: 80 } as const;
-const SETTINGS_WIN = { w: 340, h: 185 } as const;
+const SETTINGS_WIN = { w: 420, h: 210 } as const;
 
 type Phase = "work" | "break" | "settings";
 
@@ -37,6 +37,42 @@ function hexToRgba(hex: string, a: number): string {
 }
 
 const isValidHex = (s: string) => /^#[0-9a-fA-F]{6}$/.test(s);
+
+interface SizeState {
+  work: { w: number; h: number } | null;
+  settings: { w: number; h: number } | null;
+}
+
+type SizeAction =
+  | { type: "work"; w: number; h: number }
+  | { type: "settings"; w: number; h: number };
+
+function sizeReducer(state: SizeState, action: SizeAction): SizeState {
+  return { ...state, [action.type]: { w: action.w, h: action.h } };
+}
+
+const SIZE_VERSION = "3";
+
+function initSizes(): SizeState {
+  if (localStorage.getItem("eyecare-size-version") !== SIZE_VERSION) {
+    localStorage.removeItem("eyecare-window-size");
+    localStorage.removeItem("eyecare-settings-size");
+    localStorage.setItem("eyecare-size-version", SIZE_VERSION);
+    return { work: null, settings: null };
+  }
+  const parse = (key: string): { w: number; h: number } | null => {
+    try {
+      const s = localStorage.getItem(key);
+      return s ? (JSON.parse(s) as { w: number; h: number }) : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    work: parse("eyecare-window-size"),
+    settings: parse("eyecare-settings-size"),
+  };
+}
 
 function readConfig(): Config {
   try {
@@ -68,6 +104,7 @@ export default function App() {
   const [phase, setPhase] = useState<Phase>("work");
   const [remaining, setRemaining] = useState<number>(config.workSecs);
   const [breakExiting, setBreakExiting] = useState(false);
+  const [started, setStarted] = useState(false);
   const [fontScale, setFontScale] = useState(() => {
     const saved = localStorage.getItem("eyecare-font-scale");
     return saved ? parseFloat(saved) : 1;
@@ -86,58 +123,69 @@ export default function App() {
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedPosRef = useRef<{ x: number; y: number } | null>(null);
-  const savedSizeRef = useRef<{ w: number; h: number } | null>(null);
+  const transitioningRef = useRef(false);
+  const [sizes, dispatchSize] = useReducer(sizeReducer, undefined, initSizes);
+  const sizesRef = useRef<SizeState>(sizes);
+  sizesRef.current = sizes;
   phaseRef.current = phase;
   configRef.current = config;
 
   /* ── Window positioning ── */
 
   const toWorkMode = useCallback(async () => {
-    await appWindow.setDecorations(true);
-    const restoreSize =
-      savedSizeRef.current ??
-      (() => {
-        const s = localStorage.getItem("eyecare-window-size");
-        return s ? (JSON.parse(s) as { w: number; h: number }) : null;
-      })();
-    if (restoreSize) {
-      await appWindow.setSize(new PhysicalSize(restoreSize.w, restoreSize.h));
-    } else {
-      await appWindow.setSize(new LogicalSize(WIDGET.w, WIDGET.h));
+    transitioningRef.current = true;
+    try {
+      await appWindow.setDecorations(true);
+      const size = sizesRef.current.work;
+      if (size) {
+        await appWindow.setSize(new PhysicalSize(size.w, size.h));
+      } else {
+        await appWindow.setSize(new LogicalSize(WIDGET.w, WIDGET.h));
+      }
+      if (savedPosRef.current) {
+        await appWindow.setPosition(
+          new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y),
+        );
+        savedPosRef.current = null;
+      }
+      await appWindow.show();
+    } finally {
+      transitioningRef.current = false;
     }
-    savedSizeRef.current = null;
-    if (savedPosRef.current) {
-      await appWindow.setPosition(
-        new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y),
-      );
-      savedPosRef.current = null;
-    }
-    await appWindow.show();
   }, [appWindow]);
 
   const toBreakMode = useCallback(async () => {
-    const [pos, size] = await Promise.all([
+    const [pos, sz] = await Promise.all([
       appWindow.outerPosition(),
-      appWindow.outerSize(),
+      appWindow.innerSize(),
     ]);
     savedPosRef.current = { x: pos.x, y: pos.y };
-    savedSizeRef.current = { w: size.width, h: size.height };
-    await appWindow.setDecorations(false);
-    await appWindow.setSize(new LogicalSize(screen.width, screen.height));
-    await appWindow.setPosition(new LogicalPosition(0, 0));
-    await appWindow.show();
+    dispatchSize({ type: "work", w: sz.width, h: sz.height });
+    transitioningRef.current = true;
+    try {
+      await appWindow.setDecorations(false);
+      await appWindow.setSize(new LogicalSize(screen.width, screen.height));
+      await appWindow.setPosition(new LogicalPosition(0, 0));
+      await appWindow.show();
+    } finally {
+      transitioningRef.current = false;
+    }
   }, [appWindow]);
 
   const toSettingsMode = useCallback(async () => {
-    await appWindow.setDecorations(true);
-    const saved = localStorage.getItem("eyecare-settings-size");
-    const size = saved ? (JSON.parse(saved) as { w: number; h: number }) : null;
-    if (size) {
-      await appWindow.setSize(new PhysicalSize(size.w, size.h));
-    } else {
-      await appWindow.setSize(new LogicalSize(SETTINGS_WIN.w, SETTINGS_WIN.h));
+    transitioningRef.current = true;
+    try {
+      await appWindow.setDecorations(true);
+      const size = sizesRef.current.settings;
+      if (size) {
+        await appWindow.setSize(new PhysicalSize(size.w, size.h));
+      } else {
+        await appWindow.setSize(new LogicalSize(SETTINGS_WIN.w, SETTINGS_WIN.h));
+      }
+      await appWindow.show();
+    } finally {
+      transitioningRef.current = false;
     }
-    await appWindow.show();
   }, [appWindow]);
 
   /* ── Animated break exit ── */
@@ -201,17 +249,12 @@ export default function App() {
     let unlisten: (() => void) | undefined;
     appWindow
       .onResized(async () => {
-        const size = await appWindow.outerSize();
+        if (transitioningRef.current) return;
+        const size = await appWindow.innerSize();
         if (phaseRef.current === "work") {
-          localStorage.setItem(
-            "eyecare-window-size",
-            JSON.stringify({ w: size.width, h: size.height }),
-          );
+          dispatchSize({ type: "work", w: size.width, h: size.height });
         } else if (phaseRef.current === "settings") {
-          localStorage.setItem(
-            "eyecare-settings-size",
-            JSON.stringify({ w: size.width, h: size.height }),
-          );
+          dispatchSize({ type: "settings", w: size.width, h: size.height });
         }
       })
       .then((fn) => {
@@ -220,10 +263,25 @@ export default function App() {
     return () => unlisten?.();
   }, [appWindow]);
 
+  /* ── Persist window sizes ── */
+
+  useEffect(() => {
+    if (sizes.work)
+      localStorage.setItem("eyecare-window-size", JSON.stringify(sizes.work));
+  }, [sizes.work]);
+
+  useEffect(() => {
+    if (sizes.settings)
+      localStorage.setItem(
+        "eyecare-settings-size",
+        JSON.stringify(sizes.settings),
+      );
+  }, [sizes.settings]);
+
   /* ── Init ── */
 
   useEffect(() => {
-    toWorkMode().then(startTick);
+    toWorkMode();
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
@@ -503,7 +561,7 @@ export default function App() {
                   : {}
               }
             >
-              Apply
+              Apply &amp; Start
             </button>
           </div>
         </div>
@@ -522,7 +580,22 @@ export default function App() {
           ⚙
         </button>
       </div>
-      <div className="widget-timer">{fmt(remaining)}</div>
+      {started ? (
+        <div className="widget-timer">screen → {fmt(remaining)}</div>
+      ) : (
+        <button
+          className="widget-start"
+          style={{
+            width: "fit-content",
+          }}
+          onClick={() => {
+            setStarted(true);
+            startTick();
+          }}
+        >
+          Start
+        </button>
+      )}
     </main>
   );
 }

@@ -319,3 +319,21 @@ kbd {
     letter-spacing: -1px;
     margin-top: 2px;
 }
+
+.widget-start {
+    margin-top: 4px;
+    padding: 4px 18px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: inherit;
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+}
+
+.widget-start:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
