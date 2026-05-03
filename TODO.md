@@ -1,1 +1,1 @@
-The applySettings function has multiple silent return guards — if any input is mid-edit (e.g. an empty number field, or a hex code shorter than 6 chars), it bails without feedback and users assume the button is broken. The fix: compute validity in render and disable Apply when the inputs aren't valid yet.
+1. In windows, when exiting the settings, it returns to work mode at the same size as the settings window plus additional size

@@ -8,8 +8,8 @@ import {
 } from "@tauri-apps/api/dpi";
 import "./App.css";
 
-const DEFAULT_WORK_SECS = 12 * 60 + 30;
-const DEFAULT_BREAK_SECS = 60;
+const DEFAULT_WORK_SECS = 15 * 60;
+const DEFAULT_BREAK_SECS = 30;
 const BREAK_EXIT_MS = 350;
 
 const WIDGET = { w: 240, h: 80 } as const;
@@ -73,10 +73,10 @@ export default function App() {
     return saved ? parseFloat(saved) : 1;
   });
 
-  const [inputWorkMin, setInputWorkMin] = useState("12");
-  const [inputWorkSec, setInputWorkSec] = useState("30");
-  const [inputBreakMin, setInputBreakMin] = useState("1");
-  const [inputBreakSec, setInputBreakSec] = useState("0");
+  const [inputWorkMin, setInputWorkMin] = useState("15");
+  const [inputWorkSec, setInputWorkSec] = useState("0");
+  const [inputBreakMin, setInputBreakMin] = useState("0");
+  const [inputBreakSec, setInputBreakSec] = useState("30");
   const [inputWorkColor, setInputWorkColor] = useState("#f05365");
   const [inputBreakColor, setInputBreakColor] = useState("#7d83ff");
 
