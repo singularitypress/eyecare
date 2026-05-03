@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalSize, LogicalPosition, PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
+import {
+  LogicalSize,
+  LogicalPosition,
+  PhysicalPosition,
+  PhysicalSize,
+} from "@tauri-apps/api/dpi";
 import "./App.css";
 
 const DEFAULT_WORK_SECS = 12 * 60 + 30;
@@ -47,10 +52,12 @@ function readConfig(): Config {
         };
       }
     }
-  } catch { }
+  } catch {}
   return {
-    workSecs: DEFAULT_WORK_SECS, breakSecs: DEFAULT_BREAK_SECS,
-    workColor: "#f05365", breakColor: "#7d83ff",
+    workSecs: DEFAULT_WORK_SECS,
+    breakSecs: DEFAULT_BREAK_SECS,
+    workColor: "#f05365",
+    breakColor: "#7d83ff",
   };
 }
 
@@ -87,10 +94,12 @@ export default function App() {
 
   const toWorkMode = useCallback(async () => {
     await appWindow.setDecorations(true);
-    const restoreSize = savedSizeRef.current ?? (() => {
-      const s = localStorage.getItem("eyecare-window-size");
-      return s ? JSON.parse(s) as { w: number; h: number } : null;
-    })();
+    const restoreSize =
+      savedSizeRef.current ??
+      (() => {
+        const s = localStorage.getItem("eyecare-window-size");
+        return s ? (JSON.parse(s) as { w: number; h: number }) : null;
+      })();
     if (restoreSize) {
       await appWindow.setSize(new PhysicalSize(restoreSize.w, restoreSize.h));
     } else {
@@ -98,14 +107,19 @@ export default function App() {
     }
     savedSizeRef.current = null;
     if (savedPosRef.current) {
-      await appWindow.setPosition(new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y));
+      await appWindow.setPosition(
+        new PhysicalPosition(savedPosRef.current.x, savedPosRef.current.y),
+      );
       savedPosRef.current = null;
     }
     await appWindow.show();
   }, [appWindow]);
 
   const toBreakMode = useCallback(async () => {
-    const [pos, size] = await Promise.all([appWindow.outerPosition(), appWindow.outerSize()]);
+    const [pos, size] = await Promise.all([
+      appWindow.outerPosition(),
+      appWindow.outerSize(),
+    ]);
     savedPosRef.current = { x: pos.x, y: pos.y };
     savedSizeRef.current = { w: size.width, h: size.height };
     await appWindow.setDecorations(false);
@@ -117,7 +131,7 @@ export default function App() {
   const toSettingsMode = useCallback(async () => {
     await appWindow.setDecorations(true);
     const saved = localStorage.getItem("eyecare-settings-size");
-    const size = saved ? JSON.parse(saved) as { w: number; h: number } : null;
+    const size = saved ? (JSON.parse(saved) as { w: number; h: number }) : null;
     if (size) {
       await appWindow.setSize(new PhysicalSize(size.w, size.h));
     } else {
@@ -129,8 +143,13 @@ export default function App() {
   /* ── Animated break exit ── */
 
   const startBreakExit = useCallback((onDone: () => void) => {
-    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-    if (exitTimerRef.current) { clearTimeout(exitTimerRef.current); }
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current);
+    }
     setBreakExiting(true);
     exitTimerRef.current = setTimeout(() => {
       setBreakExiting(false);
@@ -180,14 +199,24 @@ export default function App() {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    appWindow.onResized(async () => {
-      const size = await appWindow.outerSize();
-      if (phaseRef.current === "work") {
-        localStorage.setItem("eyecare-window-size", JSON.stringify({ w: size.width, h: size.height }));
-      } else if (phaseRef.current === "settings") {
-        localStorage.setItem("eyecare-settings-size", JSON.stringify({ w: size.width, h: size.height }));
-      }
-    }).then(fn => { unlisten = fn; });
+    appWindow
+      .onResized(async () => {
+        const size = await appWindow.outerSize();
+        if (phaseRef.current === "work") {
+          localStorage.setItem(
+            "eyecare-window-size",
+            JSON.stringify({ w: size.width, h: size.height }),
+          );
+        } else if (phaseRef.current === "settings") {
+          localStorage.setItem(
+            "eyecare-settings-size",
+            JSON.stringify({ w: size.width, h: size.height }),
+          );
+        }
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
     return () => unlisten?.();
   }, [appWindow]);
 
@@ -241,14 +270,14 @@ export default function App() {
       if (!e.metaKey && !e.ctrlKey) return;
       if (e.key === "=" || e.key === "+") {
         e.preventDefault();
-        setFontScale(s => {
+        setFontScale((s) => {
           const next = Math.min(2, Math.round((s + 0.1) * 10) / 10);
           localStorage.setItem("eyecare-font-scale", String(next));
           return next;
         });
       } else if (e.key === "-") {
         e.preventDefault();
-        setFontScale(s => {
+        setFontScale((s) => {
           const next = Math.max(0.5, Math.round((s - 0.1) * 10) / 10);
           localStorage.setItem("eyecare-font-scale", String(next));
           return next;
@@ -284,28 +313,63 @@ export default function App() {
     startTick();
   };
 
-  const applySettings = async () => {
+  /* ── Validation ── */
+
+  const isSettingsValid = useMemo(() => {
     const wm = parseInt(inputWorkMin, 10);
     const ws = parseInt(inputWorkSec, 10);
     const bm = parseInt(inputBreakMin, 10);
     const bs = parseInt(inputBreakSec, 10);
-    if ([wm, ws, bm, bs].some(isNaN)) return;
-    if (ws < 0 || ws > 59 || bs < 0 || bs > 59) return;
-    if (wm < 0 || bm < 0) return;
+
+    // Check for NaN and bounds
+    if ([wm, ws, bm, bs].some(isNaN)) return false;
+    if (ws < 0 || ws > 59 || bs < 0 || bs > 59) return false;
+    if (wm < 0 || bm < 0) return false;
+
+    // Check for 0 duration
     const totalWork = wm * 60 + ws;
     const totalBreak = bm * 60 + bs;
-    if (totalWork <= 0 || totalBreak <= 0) return;
-    if (!isValidHex(inputWorkColor) || !isValidHex(inputBreakColor)) return;
+    if (totalWork <= 0 || totalBreak <= 0) return false;
+
+    // Check hex validity
+    if (!isValidHex(inputWorkColor) || !isValidHex(inputBreakColor))
+      return false;
+
+    return true;
+  }, [
+    inputWorkMin,
+    inputWorkSec,
+    inputBreakMin,
+    inputBreakSec,
+    inputWorkColor,
+    inputBreakColor,
+  ]);
+
+  const applySettings = async () => {
+    if (!isSettingsValid) return; // Single guard relies on the useMemo
+
+    const wm = parseInt(inputWorkMin, 10);
+    const ws = parseInt(inputWorkSec, 10);
+    const bm = parseInt(inputBreakMin, 10);
+    const bs = parseInt(inputBreakSec, 10);
+
+    const totalWork = wm * 60 + ws;
+    const totalBreak = bm * 60 + bs;
+
     const next: Config = {
-      workSecs: totalWork, breakSecs: totalBreak,
-      workColor: inputWorkColor, breakColor: inputBreakColor,
+      workSecs: totalWork,
+      breakSecs: totalBreak,
+      workColor: inputWorkColor,
+      breakColor: inputBreakColor,
     };
+
     setConfig(next);
     configRef.current = next;
     localStorage.setItem("eyecare-config", JSON.stringify(next));
     phaseRef.current = "work";
     remainingRef.current = totalWork;
     setRemaining(totalWork);
+
     await toWorkMode();
     setPhase("work");
     startTick();
@@ -330,7 +394,9 @@ export default function App() {
           <h1>Relax</h1>
           <p className="break-sub">Remember to hydrate! Drink water.</p>
           <div className="break-timer">{fmt(remaining)}</div>
-          <p className="hint">Press <kbd>Esc</kbd> to skip</p>
+          <p className="hint">
+            Press <kbd>Esc</kbd> to skip
+          </p>
         </div>
       </main>
     );
@@ -344,46 +410,101 @@ export default function App() {
           <div className="settings-field">
             <label>Work</label>
             <div className="duration-inputs">
-              <input type="number" min="0" value={inputWorkMin}
-                onChange={e => setInputWorkMin(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <input
+                type="number"
+                min="0"
+                value={inputWorkMin}
+                onChange={(e) => setInputWorkMin(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applySettings()}
+              />
               <span className="duration-sep">m</span>
-              <input type="number" min="0" max="59" value={inputWorkSec}
-                onChange={e => setInputWorkSec(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={inputWorkSec}
+                onChange={(e) => setInputWorkSec(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applySettings()}
+              />
               <span className="duration-sep">s</span>
-              <input type="color" className="color-swatch" value={inputWorkColor}
-                onChange={e => setInputWorkColor(e.target.value)} />
+              <input
+                type="color"
+                className="color-swatch"
+                value={inputWorkColor}
+                onChange={(e) => setInputWorkColor(e.target.value)}
+              />
               <span className="hex-prefix">#</span>
-              <input type="text" className="hex-input"
+              <input
+                type="text"
+                className="hex-input"
                 value={inputWorkColor.replace(/^#/, "")}
-                maxLength={6} spellCheck={false} placeholder="f05365"
-                onChange={e => onHexChange(e.target.value, setInputWorkColor)} />
+                maxLength={6}
+                spellCheck={false}
+                placeholder="f05365"
+                onChange={(e) => onHexChange(e.target.value, setInputWorkColor)}
+              />
             </div>
           </div>
           <div className="settings-field">
             <label>Break</label>
             <div className="duration-inputs">
-              <input type="number" min="0" value={inputBreakMin}
-                onChange={e => setInputBreakMin(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <input
+                type="number"
+                min="0"
+                value={inputBreakMin}
+                onChange={(e) => setInputBreakMin(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applySettings()}
+              />
               <span className="duration-sep">m</span>
-              <input type="number" min="0" max="59" value={inputBreakSec}
-                onChange={e => setInputBreakSec(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && applySettings()} />
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={inputBreakSec}
+                onChange={(e) => setInputBreakSec(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applySettings()}
+              />
               <span className="duration-sep">s</span>
-              <input type="color" className="color-swatch" value={inputBreakColor}
-                onChange={e => setInputBreakColor(e.target.value)} />
+              <input
+                type="color"
+                className="color-swatch"
+                value={inputBreakColor}
+                onChange={(e) => setInputBreakColor(e.target.value)}
+              />
               <span className="hex-prefix">#</span>
-              <input type="text" className="hex-input"
+              <input
+                type="text"
+                className="hex-input"
                 value={inputBreakColor.replace(/^#/, "")}
-                maxLength={6} spellCheck={false} placeholder="7d83ff"
-                onChange={e => onHexChange(e.target.value, setInputBreakColor)} />
+                maxLength={6}
+                spellCheck={false}
+                placeholder="7d83ff"
+                onChange={(e) =>
+                  onHexChange(e.target.value, setInputBreakColor)
+                }
+              />
             </div>
           </div>
           <div className="settings-actions">
-            <button className="btn-cancel" onClick={cancelSettings}>Cancel</button>
-            <button className="btn-apply" onClick={applySettings}>Apply</button>
+            <button className="btn-cancel" onClick={cancelSettings}>
+              Cancel
+            </button>
+            <button
+              className="btn-apply"
+              onClick={applySettings}
+              disabled={!isSettingsValid}
+              style={
+                !isSettingsValid
+                  ? {
+                      background: "rgba(0, 0, 0, 0.15)",
+                      color: "rgba(255, 255, 255, 0.15)",
+                      cursor: "not-allowed",
+                    }
+                  : {}
+              }
+            >
+              Apply
+            </button>
           </div>
         </div>
       </main>
@@ -397,7 +518,9 @@ export default function App() {
     >
       <div className="widget-top">
         <span className="widget-label">Next break</span>
-        <button className="widget-gear" onClick={openSettings} title="Settings">⚙</button>
+        <button className="widget-gear" onClick={openSettings} title="Settings">
+          ⚙
+        </button>
       </div>
       <div className="widget-timer">{fmt(remaining)}</div>
     </main>
